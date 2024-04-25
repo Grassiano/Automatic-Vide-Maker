@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/local/bin/python3
+
 
 from functions import minimize_dir, crop_dir
 
