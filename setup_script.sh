@@ -4,6 +4,8 @@
 if ! command -v brew &> /dev/null; then
     echo "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> /Users/$USER/.zprofile
+    eval "$(/opt/homebrew/bin/brew shellenv)"
 else
     echo "Homebrew is already installed."
 fi
@@ -38,7 +40,7 @@ echo "Installing pillow library..."
 pip3 install pillow
 
 # Give executable permissions to a list of files
-files=("script1.sh" "script2.sh" "script3.sh") # Add your list of file names here
+files=("crop.py" "functions.py" "minimize.py" "minimize_and_crop.py" "run_script.sh") # Add your list of file names here
 
 for file in "${files[@]}"; do
     if [[ -e "$file" ]]; then
@@ -50,4 +52,5 @@ for file in "${files[@]}"; do
 done
 
 echo "Script execution completed."
+
 
