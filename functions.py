@@ -5,9 +5,10 @@ import os
 import re
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image, ImageOps
 
-ratio = 5/4
+ratio = 5 / 4
 
 def is_image_file(file_path):
     try:
@@ -21,7 +22,6 @@ def extract_number(filename):
     return int(match.group(0)) if match else float('inf')
 
 def create_output_directory(base_dir):
-    # This function creates a new directory named sequentially based on existing directories
     base_name = "output"
     i = 1
     while True:
@@ -34,7 +34,7 @@ def create_output_directory(base_dir):
 def process_file(file_name, file_type, index, input_directory, output_directory, process_type="crop"):
     print(f"{process_type.capitalize()}ing", file_name)
     input_path = os.path.join(input_directory, file_name)
-    output_name = file_name if process_type == "minimize" else f"{index} {file_type}{os.path.splitext(file_name)[1]}"
+    output_name = file_name if process_type == "minimize" else f"{index}_{file_type.lower()}{os.path.splitext(file_name)[1]}"
     output_path = os.path.join(output_directory, output_name)
 
     if process_type == "crop":
@@ -62,45 +62,46 @@ def process_directory(input_directory, output_directory, process_type="crop"):
     videos = sorted((f for f in files if not is_image_file(os.path.join(input_directory, f)) and not f.startswith('.')), key=extract_number)
 
     if process_type == "minimize":
-        for f in images + videos:
-            process_file(f, 'P' if is_image_file(os.path.join(input_directory, f)) else 'V', 0, input_directory, output_directory, process_type)
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(process_file, f, 'P' if is_image_file(os.path.join(input_directory, f)) else 'V', 0, input_directory, output_directory, process_type) for f in images + videos]
+            for future in as_completed(futures):
+                future.result()
     else:
-        index = 1
-        paired_files = zip(images, videos)
-        for img, vid in paired_files:
-            process_file(img, 'P', index, input_directory, output_directory, process_type)
-            process_file(vid, 'V', index, input_directory, output_directory, process_type)
-            index += 1
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            index = 1
+            paired_files = zip(images, videos)
+            for img, vid in paired_files:
+                futures.append(executor.submit(process_file, img, 'P', index, input_directory, output_directory, process_type))
+                futures.append(executor.submit(process_file, vid, 'V', index, input_directory, output_directory, process_type))
+                index += 1
+            for future in as_completed(futures):
+                future.result()
 
 def crop_dir(input_directory, base_output_directory):
     output_directory = create_output_directory(base_output_directory)
     process_directory(input_directory, output_directory, "crop")
     
-    # Delete files in the input directory after processing
-    input_files = os.listdir(input_directory)  # Get list of files in the input directory
+    input_files = os.listdir(input_directory)
     for file in input_files:
         file_path = os.path.join(input_directory, file)
         try:
             os.remove(file_path)
-            print(f"Deleted {file} from input directory")  # Debugging line to confirm deletion
+            print(f"Deleted {file} from input directory")
         except Exception as e:
-            print(f"Error deleting {file}: {e}")  # Print any error if deletion fails
+            print(f"Error deleting {file}: {e}")
 
     print_folder = os.path.join(output_directory, "Print")
-    os.makedirs(print_folder, exist_ok=True)  # Ensure the 'Print' directory exists
+    os.makedirs(print_folder, exist_ok=True)
     
-    # Copy only image files to the 'Print' folder
     for file in os.listdir(output_directory):
         if is_image_file(os.path.join(output_directory, file)):
             src_path = os.path.join(output_directory, file)
             dst_path = os.path.join(print_folder, file)
             shutil.copy(src_path, dst_path)
-            print(f"Copied {file} to {print_folder}")  # Debugging line to confirm file copying
-
-
+            print(f"Copied {file} to {print_folder}")
 
 def minimize_dir(input_directory, output_directory):
     process_directory(input_directory, output_directory, "minimize")
-    # Code to delete original files after minimization
     for file in os.listdir(input_directory):
         os.remove(os.path.join(input_directory, file))
