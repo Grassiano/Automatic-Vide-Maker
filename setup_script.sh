@@ -37,7 +37,7 @@ fi
 
 # Install the pillow library using pip (or pip3)
 echo "Installing pillow library..."
-pip3 install pillow
+pip3 install pillow --break-system-packages
 
 # Give executable permissions to a list of files
 files=("crop.py" "functions.py" "minimize.py" "minimize_and_crop.py" "run_script.sh") # Add your list of file names here
