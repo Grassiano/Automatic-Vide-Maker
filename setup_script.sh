@@ -51,6 +51,10 @@ for file in "${files[@]}"; do
     fi
 done
 
+mkdir input
+mkdir large
+mkdir output
+
 echo "Script execution completed."
 
 
